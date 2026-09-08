@@ -19,3 +19,7 @@ class ModelMissingError(PhotoCheckError):
 
 class ImageReadError(PhotoCheckError):
     """Raised when an image file cannot be read or decoded."""
+
+
+class LlmError(PhotoCheckError):
+    """Raised when a language model request fails."""
