@@ -1,4 +1,9 @@
-"""Figures 2 to 4 and the summary table for the paper."""
+"""Figures 2 to 4 and the summary tables for the paper.
+
+Metrics files produced by the mock chat client carry ``is_mock: true`` and
+are ignored here, so numbers from the offline stand-in never reach a figure
+or a table.
+"""
 
 from __future__ import annotations
 
@@ -23,9 +28,9 @@ DPI = 300
 ROC_REQUIREMENTS = ("face_sharpness", "background_uniform", "exposure_ok", "face_size")
 OURS_LABEL = "предложенный метод"
 VLM_LABEL = "VLM zero-shot"
-MOCK_SUFFIX = " (mock)"
 GRAY_DARK = "#404040"
 GRAY_LIGHT = "#b0b0b0"
+LLM_COLUMNS = ("first_try_rate", "retry_rate", "fallback_rate", "verified_rate")
 
 
 def load_json(path: Path) -> dict | None:
@@ -33,11 +38,15 @@ def load_json(path: Path) -> dict | None:
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
 
 
-def vlm_label(vlm: dict | None) -> str:
-    """Legend label of the baseline, marked when its numbers come from the mock."""
-    if vlm is None:
-        return VLM_LABEL
-    return VLM_LABEL + (MOCK_SUFFIX if vlm.get("is_mock") else "")
+def load_real_metrics(path: Path) -> dict | None:
+    """Read a metrics file unless it is absent or was produced by the mock client."""
+    data = load_json(path)
+    if data is None:
+        return None
+    if data.get("is_mock"):
+        log.warning("%s was produced by the mock client and is ignored", path.name)
+        return None
+    return data
 
 
 def save(fig: plt.Figure, path: Path) -> None:
@@ -83,75 +92,63 @@ def f1_frame(ours: dict, vlm: dict | None) -> pd.DataFrame:
     return frame
 
 
-def plot_f1_bars(ours: dict, vlm: dict | None, path: Path) -> None:
-    """Figure 3: grouped F1 bars per requirement."""
-    frame = f1_frame(ours, vlm)
-    positions = np.arange(len(frame))
-    width = 0.38 if "vlm" in frame else 0.6
-    fig, ax = plt.subplots(figsize=(max(6, 1.35 * len(frame)), 4.6))
-    ax.bar(
-        positions - (width / 2 if "vlm" in frame else 0),
-        frame["ours"],
-        width,
-        color=GRAY_DARK,
-        label=OURS_LABEL,
-    )
-    if "vlm" in frame:
+def grouped_bars(
+    ax: plt.Axes, ours_values: list[float], vlm_values: list[float] | None, labels: list[str]
+) -> None:
+    """Bars of the proposed method with optional baseline bars beside them."""
+    positions = np.arange(len(labels))
+    width = 0.38 if vlm_values is not None else 0.6
+    offset = width / 2 if vlm_values is not None else 0
+    ax.bar(positions - offset, ours_values, width, color=GRAY_DARK, label=OURS_LABEL)
+    if vlm_values is not None:
         ax.bar(
-            positions + width / 2,
-            frame["vlm"].fillna(0),
-            width,
-            color=GRAY_LIGHT,
-            edgecolor="black",
-            label=vlm_label(vlm),
-        )
-    ax.set_xticks(positions)
-    ax.set_xticklabels(frame.index, fontsize=7.5)
-    ax.set_ylim(0, 1.05)
-    ax.set_ylabel("F1 по требованию")
-    ax.set_title("Качество обнаружения нарушений по требованиям")
-    ax.legend(loc="lower right", fontsize=8)
-    ax.grid(True, axis="y", linewidth=0.4, color=GRAY_LIGHT)
-    save(fig, path)
-
-
-def plot_consistency(ours: dict, vlm: dict | None, path: Path) -> None:
-    """Figure 4: consistency, completeness and invented claims of the conclusions."""
-    metrics = ("consistency", "completeness", "invented_rate")
-    labels = (
-        "консистентность\nс вердиктами",
-        "полнота\n(нарушение упомянуто)",
-        "доля заключений\nс лишними утверждениями",
-    )
-    ours_values = [ours["claims"][metric] for metric in metrics]
-    positions = np.arange(len(metrics))
-    width = 0.38 if vlm else 0.6
-    fig, ax = plt.subplots(figsize=(6.5, 4.2))
-    ax.bar(
-        positions - (width / 2 if vlm else 0), ours_values, width, color=GRAY_DARK, label=OURS_LABEL
-    )
-    if vlm is not None:
-        vlm_values = [vlm["claims"][metric] for metric in metrics]
-        ax.bar(
-            positions + width / 2,
+            positions + offset,
             vlm_values,
             width,
             color=GRAY_LIGHT,
             edgecolor="black",
-            label=vlm_label(vlm),
+            label=VLM_LABEL,
         )
     ax.set_xticks(positions)
-    ax.set_xticklabels(labels, fontsize=8)
+    ax.set_xticklabels(labels, fontsize=7.5)
     ax.set_ylim(0, 1.05)
-    ax.set_ylabel("Доля изображений")
-    ax.set_title("Свойства заключений")
-    ax.legend(loc="upper right", fontsize=8)
     ax.grid(True, axis="y", linewidth=0.4, color=GRAY_LIGHT)
+
+
+def plot_f1_bars(ours: dict, vlm: dict | None, path: Path) -> None:
+    """Figure 3: grouped F1 bars per requirement."""
+    frame = f1_frame(ours, vlm)
+    fig, ax = plt.subplots(figsize=(max(6, 1.35 * len(frame)), 4.6))
+    vlm_values = frame["vlm"].fillna(0).tolist() if "vlm" in frame else None
+    grouped_bars(ax, frame["ours"].tolist(), vlm_values, list(frame.index))
+    ax.set_ylabel("F1 по требованию")
+    ax.set_title("Качество обнаружения нарушений по требованиям")
+    ax.legend(loc="lower right", fontsize=8)
     save(fig, path)
 
 
-def summary_table(ours: dict, vlm: dict | None) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Table 2: per-requirement metrics of both methods and the integral metrics."""
+def plot_consistency(ours: dict, vlm: dict | None, path: Path) -> None:
+    """Figure 4: consistency, completeness and extra claims of the conclusions."""
+    metrics = ("consistency", "completeness", "invented_rate")
+    labels = [
+        "консистентность\nс вердиктами",
+        "полнота\n(нарушение упомянуто)",
+        "доля заключений\nс лишними утверждениями",
+    ]
+    fig, ax = plt.subplots(figsize=(6.5, 4.2))
+    ours_values = [ours["claims"][metric] for metric in metrics]
+    vlm_values = [vlm["claims"][metric] for metric in metrics] if vlm is not None else None
+    grouped_bars(ax, ours_values, vlm_values, labels)
+    ax.set_ylabel("Доля изображений")
+    ax.set_title("Свойства заключений")
+    ax.legend(loc="upper right", fontsize=8)
+    save(fig, path)
+
+
+def summary_table(
+    ours: dict, vlm: dict | None, llm: dict | None = None
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Table 2: per-requirement metrics and the integral metrics of the available methods."""
     rows = []
     vlm_items = {
         (item["requirement"], item["cls"]): item for item in (vlm or {}).get("per_requirement", [])
@@ -186,9 +183,12 @@ def summary_table(ours: dict, vlm: dict | None) -> tuple[pd.DataFrame, pd.DataFr
                 "vlm_frr": vlm["frr"],
                 "vlm_consistency": vlm["claims"]["consistency"],
                 "vlm_completeness": vlm["claims"]["completeness"],
-                "vlm_backends": ",".join(vlm["backends"]),
+                "vlm_n": vlm["n_images"],
             }
         )
+    if llm is not None:
+        integral.update({f"llm_{column}": llm[column] for column in LLM_COLUMNS})
+        integral["llm_n"] = llm["n"]
     return pd.DataFrame(rows), pd.DataFrame([integral])
 
 
@@ -203,7 +203,8 @@ def main() -> None:
     ours = load_json(args.results / "metrics.json")
     if ours is None:
         raise SystemExit("results/metrics.json is missing; run run_eval.py first")
-    vlm = load_json(args.results / "vlm_metrics.json")
+    vlm = load_real_metrics(args.results / "vlm_metrics.json")
+    llm = load_real_metrics(args.results / "llm_conclusions_metrics.json")
     calibration = load_json(args.results / "calibration.json")
     draw_architecture(args.figures / "fig1_architecture.jpg", DPI)
     if calibration is not None:
@@ -212,7 +213,7 @@ def main() -> None:
         log.warning("calibration.json is missing; figure 2 skipped")
     plot_f1_bars(ours, vlm, args.figures / "fig3_f1_bars.jpg")
     plot_consistency(ours, vlm, args.figures / "fig4_consistency.jpg")
-    table, integral = summary_table(ours, vlm)
+    table, integral = summary_table(ours, vlm, llm)
     table.to_csv(args.results / "table2.csv", index=False, encoding="utf-8")
     integral.to_csv(args.results / "table2_integral.csv", index=False, encoding="utf-8")
     log.info("\n%s", table.round(3).to_string(index=False))

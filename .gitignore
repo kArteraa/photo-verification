@@ -9,3 +9,4 @@ __pycache__/
 results/llm_cache/
 results/conclusions/
 out.json
+results/mock/

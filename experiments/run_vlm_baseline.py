@@ -16,6 +16,7 @@ from app.core.spec import Spec, load_spec
 from app.imageio import read_bgr
 from app.llm.client import ChatClient
 from app.llm.factory import build_client
+from app.llm.mock_client import MockChatClient
 from experiments.claims import score_claims
 from experiments.common import (
     DATA_GENERATED,
@@ -23,6 +24,7 @@ from experiments.common import (
     LLM_CACHE,
     LLM_MODEL,
     RESULTS,
+    RESULTS_MOCK,
     SEED,
     SPLIT_TEST,
     configure_logging,
@@ -107,7 +109,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=SEED)
     parser.add_argument("--mock", action="store_true")
     parser.add_argument("--cache", type=Path, default=LLM_CACHE)
-    parser.add_argument("--out", type=Path, default=RESULTS)
+    parser.add_argument("--out", type=Path, default=None, help="default: results or results/mock")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
     configure_logging(args.verbose)
@@ -120,12 +122,16 @@ def main() -> None:
         for _, row in labels.iterrows()
     }
     client = build_client(args.mock, LLM_MODEL, args.cache, mock_oracle(spec, truth, args.seed))
+    is_mock = isinstance(client, MockChatClient)
+    out = args.out or (RESULTS_MOCK if is_mock else RESULTS)
+    if is_mock:
+        log.warning("mock client in use; outputs go to %s and are not publishable", out)
     log.info("querying %d images", len(labels))
     frame = evaluate_rows(labels, images_dir, spec, client)
-    args.out.mkdir(parents=True, exist_ok=True)
-    frame.to_csv(args.out / "vlm_predictions.csv", index=False, encoding="utf-8")
+    out.mkdir(parents=True, exist_ok=True)
+    frame.to_csv(out / "vlm_predictions.csv", index=False, encoding="utf-8")
     summary = summarize(frame, spec)
-    (args.out / "vlm_metrics.json").write_text(
+    (out / "vlm_metrics.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     log.info(

@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_VALID = ROOT / "data" / "valid"
 DATA_GENERATED = ROOT / "data" / "generated"
 RESULTS = ROOT / "results"
+RESULTS_MOCK = RESULTS / "mock"
 FIGURES = RESULTS / "figures"
 MODELS_DIR = ROOT / "models"
 SPECS_DIR = ROOT / "app" / "specs"
