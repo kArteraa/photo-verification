@@ -1,0 +1,148 @@
+{
+  "image": "ffhq_00017__busy_background.jpg",
+  "spec": "document_photo",
+  "accepted": false,
+  "verdicts": [
+    {
+      "id": "single_face",
+      "title": "На снимке ровно одно лицо",
+      "status": "pass",
+      "kind": "hard",
+      "measured": {
+        "count": 1
+      }
+    },
+    {
+      "id": "min_resolution",
+      "title": "Достаточное разрешение снимка",
+      "status": "pass",
+      "kind": "hard",
+      "measured": {
+        "min_side": 512
+      }
+    },
+    {
+      "id": "exposure_ok",
+      "title": "Нормальная экспозиция",
+      "status": "pass",
+      "kind": "hard",
+      "measured": {
+        "mean_brightness": 96.0158
+      }
+    },
+    {
+      "id": "frontal_pose",
+      "title": "Фронтальное положение головы",
+      "status": "pass",
+      "kind": "hard",
+      "measured": {
+        "yaw": -11.0128,
+        "pitch": 9.8977
+      }
+    },
+    {
+      "id": "eyes_open",
+      "title": "Глаза открыты",
+      "status": "pass",
+      "kind": "hard",
+      "measured": {
+        "min_ear": 0.3149
+      }
+    },
+    {
+      "id": "face_sharpness",
+      "title": "Резкость изображения лица",
+      "status": "pass",
+      "kind": "hard",
+      "measured": {
+        "var": 93.043
+      }
+    },
+    {
+      "id": "background_uniform",
+      "title": "Однородный фон",
+      "status": "fail",
+      "kind": "hard",
+      "measured": {
+        "cv": 0.3051
+      },
+      "threshold": {
+        "cv": 0.2287
+      },
+      "reason": "коэффициент вариации яркости фона 0.31 при допуске 0.2287",
+      "fix_hint": "снимайте на ровном однотонном светлом фоне без предметов"
+    },
+    {
+      "id": "face_size",
+      "title": "Размер лица в кадре",
+      "status": "pass",
+      "kind": "hard",
+      "measured": {
+        "face_area_ratio": 0.3576
+      }
+    },
+    {
+      "id": "face_centered",
+      "title": "Лицо в центре кадра",
+      "status": "pass",
+      "kind": "hard",
+      "measured": {
+        "offset": 0.1198
+      }
+    },
+    {
+      "id": "headroom",
+      "title": "Отступ над головой",
+      "status": "pass",
+      "kind": "soft",
+      "measured": {
+        "headroom_ratio": 0.0938
+      }
+    }
+  ],
+  "measurements": {
+    "face.count": {
+      "count": 1
+    },
+    "resolution.size": {
+      "width": 512,
+      "height": 512,
+      "min_side": 512,
+      "aspect_ratio": 1.0
+    },
+    "exposure.stats": {
+      "mean_brightness": 96.0158,
+      "std_brightness": 53.1304,
+      "clip_low": 0.0551,
+      "clip_high": 0.0
+    },
+    "pose.yaw_pitch": {
+      "yaw": -11.0128,
+      "pitch": 9.8977,
+      "roll": 1.6581
+    },
+    "eyes.min_ear": {
+      "min_ear": 0.3149,
+      "left_ear": 0.3149,
+      "right_ear": 0.3517
+    },
+    "sharpness.face_laplacian_var": {
+      "var": 93.043
+    },
+    "background.cv": {
+      "cv": 0.3051,
+      "fraction": 0.393
+    },
+    "geometry.face_area_ratio": {
+      "face_area_ratio": 0.3576
+    },
+    "geometry.center_offset": {
+      "offset": 0.1198,
+      "dx": -0.0453,
+      "dy": 0.111
+    },
+    "geometry.headroom_ratio": {
+      "headroom_ratio": 0.0938
+    }
+  }
+}
