@@ -1,0 +1,75 @@
+name: aesthetic
+description: "Эстетические рекомендации к портрету"
+requirements:
+  - id: single_face
+    title: "В кадре одно лицо"
+    measurer: face.count
+    predicate: {op: eq, value: 1}
+    kind: soft
+    depends_on: []
+    reason_template: "обнаружено лиц: {value}"
+    fix_hint: "рекомендации ниже рассчитаны на одиночный портрет"
+  - id: frontal_pose
+    title: "Взгляд в камеру"
+    measurer: pose.yaw_pitch
+    predicate: {op: abs_le, keys: [yaw, pitch], value: [15.0, 15.0]}
+    kind: soft
+    depends_on: [single_face]
+    reason_template: "голова повёрнута на yaw={yaw:.1f}°, pitch={pitch:.1f}° при рекомендуемом ±{tau_yaw:g}°"
+    fix_hint: "поверните голову {yaw_dir} примерно на {yaw_abs:.0f}° и {pitch_dir}"
+  - id: eye_line_thirds
+    title: "Линия глаз по правилу третей"
+    measurer: geometry.eye_line_ratio
+    predicate: {op: range, value: [0.25, 0.45]}
+    kind: soft
+    depends_on: [single_face]
+    reason_template: "линия глаз на {value:.2f} высоты кадра, что {side} рекомендуемого [{lo}, {hi}]"
+    fix_hint: "скомпонуйте кадр так, чтобы глаза оказались на верхней трети"
+  - id: face_centered
+    title: "Лицо по горизонтали в центре"
+    measurer: geometry.center_offset
+    predicate: {op: abs_le, key: dx, value: 0.10}
+    kind: soft
+    depends_on: [single_face]
+    reason_template: "лицо смещено по горизонтали на {dx_abs:.2f} ширины кадра при рекомендуемом до {tau}"
+    fix_hint: "сдвиньте кадр так, чтобы лицо было {dx_dir}"
+  - id: headroom
+    title: "Отступ над головой"
+    measurer: geometry.headroom_ratio
+    predicate: {op: range, value: [0.05, 0.20]}
+    kind: soft
+    depends_on: [single_face]
+    reason_template: "отступ над головой {value:.2f} высоты кадра {side} рекомендуемого [{lo}, {hi}]"
+    fix_hint: "оставьте над головой небольшой воздух, но без пустого пространства"
+  - id: even_lighting
+    title: "Равномерное освещение лица"
+    measurer: illumination.face_asymmetry
+    predicate: {op: abs_le, value: 0.15}
+    kind: soft
+    depends_on: [single_face]
+    reason_template: "асимметрия освещённости половин лица {asymmetry_abs:.2f} при рекомендуемом до {tau}"
+    fix_hint: "добавьте света {asymmetry_dir} или развернитесь к источнику света"
+  - id: face_sharpness
+    title: "Резкость на лице"
+    measurer: sharpness.face_laplacian_var
+    predicate: {op: ge, value: 100.0}
+    kind: soft
+    depends_on: [single_face]
+    reason_template: "дисперсия лапласиана в области лица {value:.1f} при рекомендуемом от {tau}"
+    fix_hint: "сфокусируйтесь на глазах и используйте короткую выдержку"
+  - id: exposure_balanced
+    title: "Сбалансированная экспозиция"
+    measurer: exposure.stats
+    predicate: {op: range, key: mean_brightness, value: [80, 190]}
+    kind: soft
+    depends_on: []
+    reason_template: "средняя яркость {value:.0f} {side} рекомендуемого диапазона [{lo}, {hi}]"
+    fix_hint: "скорректируйте экспозицию, чтобы кадр не был ни тёмным, ни выбеленным"
+  - id: background_calm
+    title: "Спокойный фон"
+    measurer: background.cv
+    predicate: {op: le, value: 0.30}
+    kind: soft
+    depends_on: [single_face]
+    reason_template: "коэффициент вариации яркости фона {value:.2f} при рекомендуемом до {tau}"
+    fix_hint: "выберите более однородный фон или откройте диафрагму для размытия"

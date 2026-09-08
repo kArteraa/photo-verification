@@ -1,0 +1,75 @@
+name: avatar
+description: "Требования к аватару пользователя площадки"
+requirements:
+  - id: single_face
+    title: "На снимке одно лицо"
+    measurer: face.count
+    predicate: {op: eq, value: 1}
+    kind: hard
+    depends_on: []
+    reason_template: "обнаружено лиц: {value} (требуется ровно 1)"
+    fix_hint: "выберите фотографию, где в кадре только вы"
+  - id: min_resolution
+    title: "Достаточное разрешение"
+    measurer: resolution.size
+    predicate: {op: ge, value: 200}
+    kind: hard
+    depends_on: []
+    reason_template: "меньшая сторона кадра {value} px при минимуме {tau} px"
+    fix_hint: "загрузите изображение большего размера"
+  - id: exposure_ok
+    title: "Приемлемая экспозиция"
+    measurer: exposure.stats
+    predicate: {op: range, key: mean_brightness, value: [50, 220]}
+    kind: hard
+    depends_on: []
+    reason_template: "средняя яркость {value:.0f} {side} допустимого диапазона [{lo}, {hi}]"
+    fix_hint: "выберите снимок без сильного затемнения или пересвета"
+  - id: frontal_pose
+    title: "Лицо повёрнуто к камере"
+    measurer: pose.yaw_pitch
+    predicate: {op: abs_le, keys: [yaw, pitch], value: [20.0, 20.0]}
+    kind: hard
+    depends_on: [single_face]
+    reason_template: "поворот головы yaw={yaw:.1f}°, pitch={pitch:.1f}° при допуске ±{tau_yaw:g}°"
+    fix_hint: "выберите снимок, где лицо обращено к камере"
+  - id: face_sharpness
+    title: "Лицо в фокусе"
+    measurer: sharpness.face_laplacian_var
+    predicate: {op: ge, value: 40.0}
+    kind: hard
+    depends_on: [single_face]
+    reason_template: "дисперсия лапласиана в области лица {value:.1f} при минимуме {tau}"
+    fix_hint: "выберите более резкий снимок"
+  - id: face_size
+    title: "Лицо хорошо различимо"
+    measurer: geometry.face_area_ratio
+    predicate: {op: range, value: [0.05, 0.70]}
+    kind: hard
+    depends_on: [single_face]
+    reason_template: "лицо занимает {value:.2f} площади кадра, что {side} допуска [{lo}, {hi}]"
+    fix_hint: "обрежьте снимок так, чтобы лицо занимало заметную часть кадра"
+  - id: eyes_open
+    title: "Глаза открыты"
+    measurer: eyes.min_ear
+    predicate: {op: ge, value: 0.15}
+    kind: soft
+    depends_on: [single_face]
+    reason_template: "относительная высота глазной щели {value:.2f} при минимуме {tau}"
+    fix_hint: "снимок с открытыми глазами выглядит дружелюбнее"
+  - id: background_calm
+    title: "Спокойный фон"
+    measurer: background.cv
+    predicate: {op: le, value: 0.40}
+    kind: soft
+    depends_on: [single_face]
+    reason_template: "коэффициент вариации яркости фона {value:.2f} при рекомендуемом до {tau}"
+    fix_hint: "менее пёстрый фон не будет отвлекать от лица"
+  - id: face_centered
+    title: "Лицо ближе к центру"
+    measurer: geometry.center_offset
+    predicate: {op: le, value: 0.30}
+    kind: soft
+    depends_on: [single_face]
+    reason_template: "центр лица смещён на {value:.2f} размера кадра при рекомендуемом до {tau}"
+    fix_hint: "сместите кадрирование так, чтобы лицо было {dx_dir} и {dy_dir}"
