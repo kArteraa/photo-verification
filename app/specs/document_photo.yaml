@@ -20,7 +20,7 @@ requirements:
   - id: exposure_ok
     title: "Нормальная экспозиция"
     measurer: exposure.stats
-    predicate: {op: range, key: mean_brightness, value: [70, 200]}
+    predicate: {op: range, key: mean_brightness, value: [60.1784, 173.6744]}
     kind: hard
     depends_on: []
     reason_template: "средняя яркость {value:.0f} {side} допустимого диапазона [{lo}, {hi}]"
@@ -28,7 +28,7 @@ requirements:
   - id: frontal_pose
     title: "Фронтальное положение головы"
     measurer: pose.yaw_pitch
-    predicate: {op: abs_le, keys: [yaw, pitch], value: [10.0, 10.0]}
+    predicate: {op: abs_le, keys: [yaw, pitch], value: [15.0, 18.0]}
     kind: hard
     depends_on: [single_face]
     reason_template: "поворот головы yaw={yaw:.1f}°, pitch={pitch:.1f}° при допуске ±{tau_yaw:g}°"
@@ -36,7 +36,7 @@ requirements:
   - id: eyes_open
     title: "Глаза открыты"
     measurer: eyes.min_ear
-    predicate: {op: ge, value: 0.18}
+    predicate: {op: ge, value: 0.15}
     kind: hard
     depends_on: [single_face]
     reason_template: "относительная высота глазной щели {value:.2f} при минимуме {tau}"
@@ -44,7 +44,7 @@ requirements:
   - id: face_sharpness
     title: "Резкость изображения лица"
     measurer: sharpness.face_laplacian_var
-    predicate: {op: ge, value: 60.0}
+    predicate: {op: ge, value: 77.1951}
     kind: hard
     depends_on: [single_face]
     reason_template: "дисперсия лапласиана в области лица {value:.1f} при минимуме {tau}"
@@ -52,7 +52,7 @@ requirements:
   - id: background_uniform
     title: "Однородный фон"
     measurer: background.cv
-    predicate: {op: le, value: 0.25}
+    predicate: {op: le, value: 0.2287}
     kind: hard
     depends_on: [single_face]
     reason_template: "коэффициент вариации яркости фона {value:.2f} при допуске {tau}"
@@ -60,7 +60,7 @@ requirements:
   - id: face_size
     title: "Размер лица в кадре"
     measurer: geometry.face_area_ratio
-    predicate: {op: range, value: [0.10, 0.50]}
+    predicate: {op: range, value: [0.2969, 0.5]}
     kind: hard
     depends_on: [single_face]
     reason_template: "лицо занимает {value:.2f} площади кадра, что {side} допуска [{lo}, {hi}]"
@@ -68,7 +68,7 @@ requirements:
   - id: face_centered
     title: "Лицо в центре кадра"
     measurer: geometry.center_offset
-    predicate: {op: le, value: 0.20}
+    predicate: {op: le, value: 0.1301}
     kind: hard
     depends_on: [single_face]
     reason_template: "центр лица смещён на {value:.2f} размера кадра при допуске {tau}"
