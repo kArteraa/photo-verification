@@ -65,6 +65,14 @@ def test_missing_violation_is_caught():
     assert not result.ok
 
 
+def test_verdict_counts_are_allowed_but_wrong_counts_are_not():
+    text = conclusion()
+    assert "нарушено обязательных требований: 1; не удалось проверить: 2." in text
+    assert verify_conclusion(text, rejected_report()).ok
+    wrong = text.replace("не удалось проверить: 2.", "не удалось проверить: 9.")
+    assert verify_conclusion(wrong, rejected_report()).foreign_numbers == ("9",)
+
+
 def test_foreign_number_is_caught():
     text = conclusion().replace("yaw=17.3°", "yaw=42.0°")
     result = verify_conclusion(text, rejected_report())

@@ -3,8 +3,9 @@
 The conclusion is consistent when every requirement it tags is actually
 failed or undefined in the report, every failed requirement is mentioned, the
 footer lists match the verdicts exactly, the header matches the acceptance
-flag and every number in the text occurs in the report (measured values,
-thresholds or the numbers inside generated reasons).
+flag and every number in the text occurs in the report: measured values,
+thresholds, the numbers inside generated reasons, and the counts of failed
+or undefined requirements, which follow from the verdict vector.
 """
 
 from __future__ import annotations
@@ -86,7 +87,16 @@ def allowed_numbers(report: Report) -> set[float]:
                 allowed.update(_parse(token) for token in NUMBER_PATTERN.findall(text))
     for values in report.measurements.values():
         allowed.update(_flatten(values))
+    allowed.update(verdict_counts(report))
     return allowed
+
+
+def verdict_counts(report: Report) -> set[float]:
+    """Counts a conclusion may state: failed hard, failed soft, undefined and all failed."""
+    hard = len(report.failing(Kind.HARD))
+    soft = len(report.failing(Kind.SOFT))
+    undefined = len(report.undefined())
+    return {float(hard), float(soft), float(undefined), float(hard + soft)}
 
 
 def number_matches(token: str, allowed: Iterable[float]) -> bool:

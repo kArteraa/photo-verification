@@ -72,7 +72,7 @@ def test_calibrate_requirement_ge_and_range_high():
     assert blur["roc"]["fpr"][-1] == 1.0
     bright = calibrate_requirement(frame(), spec, "bright", "f1", 0.05)
     assert bright["side"] == "hi"
-    assert bright["old_value"] == 200
+    assert bright["old_value"] == spec.by_id("exposure_ok").predicate.values[1]
     assert 170.0 < bright["new_value"] < 215.0
 
 
@@ -93,7 +93,8 @@ def test_write_thresholds_changes_only_predicate_lines(tmp_path):
     out.write_text(text, encoding="utf-8")
     spec = load_spec(out, REGISTRY)
     assert spec.by_id("face_sharpness").predicate.values == (87.5,)
-    assert spec.by_id("exposure_ok").predicate.values == (70, 205.0)
+    original_low = load_spec(SPEC_PATH, REGISTRY).by_id("exposure_ok").predicate.values[0]
+    assert spec.by_id("exposure_ok").predicate.values == (original_low, 205.0)
     assert spec.by_id("face_size").predicate.values == (0.08, 0.5)
     data = yaml.safe_load(text)
     assert data["requirements"][0]["title"] == "На снимке ровно одно лицо"

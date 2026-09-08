@@ -113,3 +113,10 @@ def test_score_claims():
     assert summary.invented_rate == pytest.approx(1 / 3)
     assert (summary.mentioned, summary.missed, summary.invented) == (2, 1, 1)
     assert score_claims([]).n == 0
+
+
+def test_metrics_without_measurement_columns():
+    table = frame().drop(columns=[c for c in frame().columns if c.startswith("m.")])
+    metrics = requirement_metrics(table, SPEC, "face_sharpness", "blur_face")
+    assert np.isnan(metrics.auc)
+    assert metrics.f1 == pytest.approx(2 / 3)

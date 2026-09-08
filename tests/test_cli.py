@@ -21,14 +21,14 @@ def fake_factory(landmarks, mask):
 
 def portrait_like(tmp_path, size=512):
     rng = np.random.default_rng(3)
-    image = np.full((size, size, 3), 200, np.uint8)
-    face = rng.integers(40, 220, size=(200, 160, 3), dtype=np.uint8)
-    image[160:360, 176:336] = face
+    image = np.full((size, size, 3), 128, np.uint8)
+    face = rng.integers(40, 220, size=(300, 300, 3), dtype=np.uint8)
+    image[106:406, 106:406] = face
     path = tmp_path / "фото.jpg"
     write_bgr(path, image, quality=95)
     mask = np.zeros((size, size), np.float32)
-    mask[120:512, 150:362] = 1.0
-    return path, [frontal_landmarks((256, 260), 160, size, size)], mask
+    mask[80:512, 90:422] = 1.0
+    return path, [frontal_landmarks((256, 256), 300, size, size)], mask
 
 
 def test_parser_subcommands():

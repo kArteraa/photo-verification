@@ -52,8 +52,10 @@ def scores_for(frame: pd.DataFrame, spec: Spec, requirement_id: str) -> pd.Serie
     requirement = spec.by_id(requirement_id)
     predicate = requirement.predicate
     columns = {key: measure_column(requirement.measurer.name, key) for key in predicate.keys}
-    values = frame[list(columns.values())]
     scores = pd.Series(np.nan, index=frame.index, dtype=float)
+    if any(column not in frame.columns for column in columns.values()):
+        return scores
+    values = frame[list(columns.values())]
     complete = values.notna().all(axis=1)
     for index in frame.index[complete]:
         row = {key: float(frame.at[index, column]) for key, column in columns.items()}
