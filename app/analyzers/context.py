@@ -71,7 +71,12 @@ def build_face(landmarks_norm: np.ndarray, width: int, height: int) -> Face:
     landmarks_px = np.asarray(landmarks_norm, dtype=np.float64)[:, :2] * scale
     x0, y0 = landmarks_px.min(axis=0)
     x1, y1 = landmarks_px.max(axis=0)
-    bbox = BBox(max(0.0, x0), max(0.0, y0), min(float(width), x1), min(float(height), y1))
+    bbox = BBox(
+        max(0.0, float(x0)),
+        max(0.0, float(y0)),
+        min(float(width), float(x1)),
+        min(float(height), float(y1)),
+    )
     return Face(np.asarray(landmarks_norm, dtype=np.float64), landmarks_px, bbox)
 
 
