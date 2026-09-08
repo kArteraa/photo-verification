@@ -1,0 +1,83 @@
+name: document_photo
+description: "Требования к документной фотографии"
+requirements:
+  - id: single_face
+    title: "На снимке ровно одно лицо"
+    measurer: face.count
+    predicate: {op: eq, value: 1}
+    kind: hard
+    depends_on: []
+    reason_template: "обнаружено лиц: {value} (требуется ровно 1)"
+    fix_hint: "сфотографируйтесь так, чтобы в кадре было только ваше лицо"
+  - id: min_resolution
+    title: "Достаточное разрешение снимка"
+    measurer: resolution.size
+    predicate: {op: ge, value: 480}
+    kind: hard
+    depends_on: []
+    reason_template: "меньшая сторона кадра {value} px при минимуме {tau} px"
+    fix_hint: "используйте снимок с большим разрешением, без сильного уменьшения"
+  - id: exposure_ok
+    title: "Нормальная экспозиция"
+    measurer: exposure.stats
+    predicate: {op: range, key: mean_brightness, value: [70, 200]}
+    kind: hard
+    depends_on: []
+    reason_template: "средняя яркость {value:.0f} {side} допустимого диапазона [{lo}, {hi}]"
+    fix_hint: "снимайте при равномерном освещении без пересвета и глубоких теней"
+  - id: frontal_pose
+    title: "Фронтальное положение головы"
+    measurer: pose.yaw_pitch
+    predicate: {op: abs_le, keys: [yaw, pitch], value: [10.0, 10.0]}
+    kind: hard
+    depends_on: [single_face]
+    reason_template: "поворот головы yaw={yaw:.1f}°, pitch={pitch:.1f}° при допуске ±{tau_yaw:g}°"
+    fix_hint: "смотрите прямо в камеру, не наклоняя и не поворачивая голову"
+  - id: eyes_open
+    title: "Глаза открыты"
+    measurer: eyes.min_ear
+    predicate: {op: ge, value: 0.18}
+    kind: hard
+    depends_on: [single_face]
+    reason_template: "относительная высота глазной щели {value:.2f} при минимуме {tau}"
+    fix_hint: "держите глаза открытыми и смотрите в объектив"
+  - id: face_sharpness
+    title: "Резкость изображения лица"
+    measurer: sharpness.face_laplacian_var
+    predicate: {op: ge, value: 60.0}
+    kind: hard
+    depends_on: [single_face]
+    reason_template: "дисперсия лапласиана в области лица {value:.1f} при минимуме {tau}"
+    fix_hint: "наведите резкость на лицо и не двигайтесь во время съёмки"
+  - id: background_uniform
+    title: "Однородный фон"
+    measurer: background.cv
+    predicate: {op: le, value: 0.25}
+    kind: hard
+    depends_on: [single_face]
+    reason_template: "коэффициент вариации яркости фона {value:.2f} при допуске {tau}"
+    fix_hint: "снимайте на ровном однотонном светлом фоне без предметов"
+  - id: face_size
+    title: "Размер лица в кадре"
+    measurer: geometry.face_area_ratio
+    predicate: {op: range, value: [0.10, 0.50]}
+    kind: hard
+    depends_on: [single_face]
+    reason_template: "лицо занимает {value:.2f} площади кадра, что {side} допуска [{lo}, {hi}]"
+    fix_hint: "измените расстояние до камеры, чтобы лицо занимало примерно треть кадра"
+  - id: face_centered
+    title: "Лицо в центре кадра"
+    measurer: geometry.center_offset
+    predicate: {op: le, value: 0.20}
+    kind: hard
+    depends_on: [single_face]
+    reason_template: "центр лица смещён на {value:.2f} размера кадра при допуске {tau}"
+    fix_hint: "сместите кадр так, чтобы лицо было {dx_dir} и {dy_dir}"
+  - id: headroom
+    title: "Отступ над головой"
+    measurer: geometry.headroom_ratio
+    predicate: {op: range, value: [0.04, 0.25]}
+    kind: soft
+    depends_on: [single_face]
+    reason_template: "отступ над головой {value:.2f} высоты кадра {side} рекомендуемого [{lo}, {hi}]"
+    fix_hint: "оставьте небольшое свободное пространство над головой"
