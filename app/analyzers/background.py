@@ -1,9 +1,15 @@
-"""Background uniformity and lightness behind the segmented person."""
+"""Background uniformity and lightness behind the segmented person.
+
+The background mask is eroded by a small fraction of the image size so that
+mixed pixels along the person boundary (hair, feathered edges) do not count
+as background texture.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
+import cv2
 import numpy as np
 
 from app.analyzers.context import AnalysisContext
@@ -12,6 +18,7 @@ from app.core.report import Measurement
 
 PERSON_THRESHOLD = 0.5
 MIN_BACKGROUND_FRACTION = 0.01
+ERODE_FRACTION = 0.015
 MIN_MEAN_FOR_CV = 1.0
 EMPTY_BACKGROUND_NOTE = "фон не виден"
 
@@ -25,9 +32,16 @@ class BackgroundStats:
     fraction: float
 
 
+def erosion_radius(shape: tuple[int, ...]) -> int:
+    """Erosion radius in pixels for an image of the given shape."""
+    return max(1, round(ERODE_FRACTION * min(shape[:2])))
+
+
 def background_mask(person_confidence: np.ndarray, person_threshold: float) -> np.ndarray:
-    """Boolean mask of pixels that are not part of the person."""
-    return np.asarray(person_confidence) <= person_threshold
+    """Boolean mask of background pixels, shrunk away from the person boundary."""
+    raw = (np.asarray(person_confidence) <= person_threshold).astype(np.uint8)
+    size = 2 * erosion_radius(raw.shape) + 1
+    return cv2.erode(raw, np.ones((size, size), np.uint8)).astype(bool)
 
 
 def background_stats(

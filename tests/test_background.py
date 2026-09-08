@@ -1,9 +1,11 @@
+import cv2
 import numpy as np
 import pytest
 
 from app.analyzers.background import (
     background_mask,
     background_stats,
+    erosion_radius,
     measure_background_cv,
     measure_background_lightness,
 )
@@ -32,7 +34,7 @@ def test_uniform_background_ignores_noisy_person():
     stats = background_stats(gray, mask)
     assert stats.cv == pytest.approx(0.0)
     assert stats.mean_lightness == pytest.approx(120.0)
-    assert stats.fraction == pytest.approx(float((mask <= 0.5).mean()))
+    assert 0.0 < stats.fraction < float((mask <= 0.5).mean())
 
 
 def test_checkerboard_background_has_high_cv():
@@ -50,9 +52,26 @@ def test_black_background_has_no_division_error():
     assert stats.mean_lightness == 0.0
 
 
-def test_background_mask_threshold():
-    mask = background_mask(np.array([[0.0, 0.5, 0.51, 1.0]]), 0.5)
-    assert mask.tolist() == [[True, True, False, False]]
+def test_background_mask_threshold_and_erosion():
+    confidence = np.zeros((SIZE, SIZE), np.float32)
+    confidence[20:44, 20:44] = 1.0
+    confidence[10, 10] = 0.5
+    mask = background_mask(confidence, 0.5)
+    radius = erosion_radius(confidence.shape)
+    assert radius == 1
+    assert mask[10, 10]
+    assert not mask[30, 30]
+    assert not mask[20 - radius, 30]
+    assert mask[20 - radius - 1, 30]
+
+
+def test_boundary_halo_is_ignored():
+    gray = np.full((SIZE, SIZE), 120, np.uint8)
+    mask = person_mask()
+    halo = cv2.dilate((mask > 0.5).astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
+    gray[halo & ~(mask > 0.5)] = 255
+    assert background_stats(gray, mask).cv == pytest.approx(0.0)
+    assert erosion_radius((512, 512)) == 8
 
 
 def test_measurers():
