@@ -12,7 +12,8 @@ import pandas as pd
 
 from app.analyzers import REGISTRY
 from app.core.engine import Engine
-from app.core.spec import load_spec
+from app.core.report import Kind
+from app.core.spec import Spec, load_spec
 from experiments.claims import ClaimRow, score_claims
 from experiments.common import (
     DATA_GENERATED,
@@ -35,20 +36,25 @@ from experiments.metrics import (
 log = logging.getLogger("run_eval")
 
 
-def claim_rows(frame: pd.DataFrame) -> list[ClaimRow]:
-    """Claims of the template conclusions against labels and own verdicts."""
+def hard_ids(spec: Spec) -> frozenset[str]:
+    """Ids of hard requirements, the only ones ground-truth labels refer to."""
+    return frozenset(r.id for r in spec.requirements if r.kind is Kind.HARD)
+
+
+def claim_rows(frame: pd.DataFrame, hard: frozenset[str]) -> list[ClaimRow]:
+    """Hard-violation claims of the conclusions against labels and own verdicts."""
     return [
         ClaimRow(
             file=row["file"],
-            claimed=frozenset(split_ids(row["claimed"])),
+            claimed=frozenset(split_ids(row["claimed"]) & hard),
             truth=frozenset({row["expected_fail_id"]} if row["expected_fail_id"] else set()),
-            own_fails=frozenset(split_ids(row["failed"])),
+            own_fails=frozenset(split_ids(row["failed"]) & hard),
         )
         for _, row in frame.iterrows()
     ]
 
 
-def summarize(frame: pd.DataFrame, spec) -> dict:
+def summarize(frame: pd.DataFrame, spec: Spec) -> dict:
     """All metrics of one prediction table."""
     per_requirement = all_requirement_metrics(frame, spec)
     rates = error_rates(frame)
@@ -60,7 +66,7 @@ def summarize(frame: pd.DataFrame, spec) -> dict:
         "per_class_far": rates.per_class_far,
         "timing": timing(frame),
         "conclusion_verified_rate": float(frame["conclusion_ok"].mean()),
-        "claims": asdict(score_claims(claim_rows(frame))),
+        "claims": asdict(score_claims(claim_rows(frame, hard_ids(spec)))),
         "cross_trigger": cross_trigger(frame, requirement_ids(frame.columns)).to_dict(),
     }
 

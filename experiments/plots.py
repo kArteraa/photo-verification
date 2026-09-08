@@ -88,7 +88,7 @@ def plot_f1_bars(ours: dict, vlm: dict | None, path: Path) -> None:
     frame = f1_frame(ours, vlm)
     positions = np.arange(len(frame))
     width = 0.38 if "vlm" in frame else 0.6
-    fig, ax = plt.subplots(figsize=(max(6, 1.1 * len(frame)), 4.2))
+    fig, ax = plt.subplots(figsize=(max(6, 1.35 * len(frame)), 4.6))
     ax.bar(
         positions - (width / 2 if "vlm" in frame else 0),
         frame["ours"],
@@ -106,7 +106,7 @@ def plot_f1_bars(ours: dict, vlm: dict | None, path: Path) -> None:
             label=vlm_label(vlm),
         )
     ax.set_xticks(positions)
-    ax.set_xticklabels(frame.index, fontsize=8)
+    ax.set_xticklabels(frame.index, fontsize=7.5)
     ax.set_ylim(0, 1.05)
     ax.set_ylabel("F1 по требованию")
     ax.set_title("Качество обнаружения нарушений по требованиям")
@@ -150,8 +150,8 @@ def plot_consistency(ours: dict, vlm: dict | None, path: Path) -> None:
     save(fig, path)
 
 
-def summary_table(ours: dict, vlm: dict | None) -> pd.DataFrame:
-    """Table 2: per-requirement metrics of both methods plus integral rows."""
+def summary_table(ours: dict, vlm: dict | None) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Table 2: per-requirement metrics of both methods and the integral metrics."""
     rows = []
     vlm_items = {
         (item["requirement"], item["cls"]): item for item in (vlm or {}).get("per_requirement", [])
@@ -173,8 +173,6 @@ def summary_table(ours: dict, vlm: dict | None) -> pd.DataFrame:
             row.update({f"vlm_{k}": baseline[k] for k in ("precision", "recall", "f1")})
         rows.append(row)
     integral = {
-        "requirement": "ALL",
-        "cls": "integral",
         "far": ours["far"],
         "frr": ours["frr"],
         "median_ms": ours["timing"]["median_ms"],
@@ -191,8 +189,7 @@ def summary_table(ours: dict, vlm: dict | None) -> pd.DataFrame:
                 "vlm_backends": ",".join(vlm["backends"]),
             }
         )
-    rows.append(integral)
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows), pd.DataFrame([integral])
 
 
 def main() -> None:
@@ -215,9 +212,11 @@ def main() -> None:
         log.warning("calibration.json is missing; figure 2 skipped")
     plot_f1_bars(ours, vlm, args.figures / "fig3_f1_bars.jpg")
     plot_consistency(ours, vlm, args.figures / "fig4_consistency.jpg")
-    table = summary_table(ours, vlm)
+    table, integral = summary_table(ours, vlm)
     table.to_csv(args.results / "table2.csv", index=False, encoding="utf-8")
+    integral.to_csv(args.results / "table2_integral.csv", index=False, encoding="utf-8")
     log.info("\n%s", table.round(3).to_string(index=False))
+    log.info("\n%s", integral.round(3).to_string(index=False))
 
 
 if __name__ == "__main__":

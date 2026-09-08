@@ -16,7 +16,7 @@ from app.core.spec import Spec, load_spec
 from app.imageio import read_bgr
 from app.llm.client import ChatClient
 from app.llm.factory import build_client
-from experiments.claims import ClaimRow, score_claims
+from experiments.claims import score_claims
 from experiments.common import (
     DATA_GENERATED,
     DOCUMENT_SPEC,
@@ -28,8 +28,9 @@ from experiments.common import (
     configure_logging,
     load_labels,
 )
-from experiments.evaluate import CLAIMED_SEPARATOR, split_ids, status_column
+from experiments.evaluate import CLAIMED_SEPARATOR, status_column
 from experiments.metrics import all_requirement_metrics, error_rates
+from experiments.run_eval import claim_rows, hard_ids
 from experiments.vlm import encode_image, image_digest, mock_oracle, parse_answer, vlm_request
 
 log = logging.getLogger("run_vlm_baseline")
@@ -78,15 +79,7 @@ def evaluate_rows(
 
 def summarize(frame: pd.DataFrame, spec: Spec) -> dict:
     """Metrics comparable with the main system."""
-    rows = [
-        ClaimRow(
-            file=row["file"],
-            claimed=frozenset(split_ids(row["claimed"])),
-            truth=frozenset({row["expected_fail_id"]} if row["expected_fail_id"] else set()),
-            own_fails=frozenset(split_ids(row["failed"])),
-        )
-        for _, row in frame.iterrows()
-    ]
+    rows = claim_rows(frame, hard_ids(spec))
     rates = error_rates(frame)
     backends = sorted(set(frame["backend"]))
     return {

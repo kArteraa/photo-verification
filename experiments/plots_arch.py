@@ -12,21 +12,21 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
 BOX_STYLE = "round,pad=0.02,rounding_size=0.02"
 STAGES = (
-    ("Изображение x", 0.06),
-    ("Анализаторы μ_i\n(лицо, поза, глаза,\nрезкость, экспозиция,\nфон, геометрия)", 0.24),
-    ("Измерения m\n(числа и флаги\nприменимости)", 0.42),
-    ("Движок правил\nспецификация R (YAML),\nграф зависимостей,\nвердикты {0, 1, ⊥}", 0.60),
-    ("Отчёт (v, m)\nJSON", 0.78),
-    ("Заключение e\nшаблон или LLM\n+ автоматическая сверка", 0.94),
+    ("Изображение x", 0.085),
+    ("Анализаторы μ_i\n(лицо, поза, глаза,\nрезкость, экспозиция,\nфон, геометрия)", 0.251),
+    ("Измерения m\n(числа и флаги\nприменимости)", 0.417),
+    ("Движок правил\nспецификация R (YAML),\nграф зависимостей,\nвердикты {0, 1, ⊥}", 0.583),
+    ("Отчёт (v, m)\nJSON", 0.749),
+    ("Заключение e\nшаблон или LLM\n+ автоматическая сверка", 0.915),
 )
-BOX_WIDTH = 0.155
-BOX_HEIGHT = 0.42
+BOX_WIDTH = 0.15
+BOX_HEIGHT = 0.5
 SHADED = {1, 3, 5}
 
 
 def draw_architecture(path: Path, dpi: int = 300) -> Path:
     """Render the pipeline diagram as a grayscale-friendly JPEG."""
-    fig, ax = plt.subplots(figsize=(12, 3.4))
+    fig, ax = plt.subplots(figsize=(13, 3.6))
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
@@ -43,7 +43,7 @@ def draw_architecture(path: Path, dpi: int = 300) -> Path:
                 facecolor=face,
             )
         )
-        ax.text(x, 0.5, label, ha="center", va="center", fontsize=9)
+        ax.text(x, 0.5, label, ha="center", va="center", fontsize=8.5)
         if index:
             previous = STAGES[index - 1][1]
             ax.add_patch(

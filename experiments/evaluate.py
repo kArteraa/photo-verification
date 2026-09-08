@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 
 from app.analyzers.context import AnalysisContext, FaceBackend
-from app.conclusion.template_gen import render_conclusion
-from app.conclusion.verify import extract_ids, verify_conclusion
+from app.conclusion.template_gen import RECOMMENDATIONS_LABEL, VIOLATIONS_LABEL, render_conclusion
+from app.conclusion.verify import extract_footer, verify_conclusion
 from app.core.engine import Engine
 from app.core.report import Measurement, Report, Status
 from app.imageio import read_bgr
@@ -64,8 +64,10 @@ def row_for(
             row[measure_column(measurer.name, key)] = np.nan if value is None else value
     conclusion = render_conclusion(report)
     row["conclusion_ok"] = verify_conclusion(conclusion, report).ok
-    claimed = sorted(extract_ids(conclusion, set(engine.spec.ids)))
-    row["claimed"] = CLAIMED_SEPARATOR.join(claimed)
+    claimed = set()
+    for label in (VIOLATIONS_LABEL, RECOMMENDATIONS_LABEL):
+        claimed |= extract_footer(conclusion, label) or set()
+    row["claimed"] = CLAIMED_SEPARATOR.join(sorted(claimed))
     row["failed"] = CLAIMED_SEPARATOR.join(
         verdict.id for verdict in report.verdicts if verdict.status is Status.FAIL
     )
