@@ -5,8 +5,10 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
+import cv2
 import numpy as np
 
+from app.analyzers.pose import camera_matrix, canonical_model
 from app.analyzers.registry import MeasurerSpec
 from app.core.report import Measurement, Number
 
@@ -94,3 +96,21 @@ def box_landmarks(
     ys = np.linspace(y0, y1, side) / height
     points = np.array([[x, y, 0.0] for y in ys for x in xs], dtype=np.float64)
     return points[:count]
+
+
+def frontal_landmarks(
+    center: tuple[float, float], face_width: float, width: int, height: int
+) -> np.ndarray:
+    """Normalized 478-point landmarks of a frontal canonical face placed in the frame."""
+    model = canonical_model()
+    unit, _ = cv2.projectPoints(
+        model, np.zeros(3), np.array([0.0, 0.0, 60.0]), camera_matrix(width, height), None
+    )
+    unit = unit.reshape(-1, 2)
+    span = unit[:, 0].max() - unit[:, 0].min()
+    points = (unit - unit.mean(axis=0)) * (face_width / span) + np.array(center)
+    iris = np.array([points[[33, 133]].mean(axis=0), points[[362, 263]].mean(axis=0)])
+    extra = np.repeat(iris, 5, axis=0)
+    pixels = np.vstack([points, extra])
+    normalized = pixels / np.array([width, height], dtype=np.float64)
+    return np.hstack([normalized, np.zeros((len(normalized), 1))])
