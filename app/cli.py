@@ -11,16 +11,20 @@ from pathlib import Path
 from app.analyzers import REGISTRY
 from app.analyzers.context import FaceBackend
 from app.analyzers.models import download_models
+from app.conclusion.llm_gen import generate_conclusion, template_synthesizer
 from app.conclusion.template_gen import render_conclusion
 from app.core.engine import Engine
 from app.core.errors import PhotoCheckError, SpecError
 from app.core.pipeline import check_image
 from app.core.report import Report
 from app.core.spec import load_spec
+from app.llm.factory import build_client
 
 log = logging.getLogger("photocheck")
 
 DEFAULT_MODELS_DIR = Path("models")
+LLM_MODEL = "claude-sonnet-4-6"
+LLM_CACHE_DIR = Path("results") / "llm_cache"
 NUM_FACES = 5
 MIN_DETECTION_CONFIDENCE = 0.5
 EXIT_ACCEPTED = 0
@@ -42,6 +46,13 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--spec", type=Path, required=True, help="YAML specification")
     check.add_argument("--json", type=Path, help="write the JSON report to this path")
     check.add_argument("--models-dir", type=Path, default=DEFAULT_MODELS_DIR)
+    check.add_argument(
+        "--llm", action="store_true", help="verbalize the report with a language model"
+    )
+    check.add_argument(
+        "--mock", action="store_true", help="with --llm: use the offline mock client"
+    )
+    check.add_argument("--llm-cache", type=Path, default=LLM_CACHE_DIR, help="recorded responses")
 
     models = subcommands.add_parser("models", help="manage model files")
     models_commands = models.add_subparsers(dest="models_command", required=True)
@@ -74,12 +85,22 @@ def run_check(args: argparse.Namespace, backend_factory: BackendFactory) -> int:
     log.info("processed %s in %.0f ms", args.image.name, result.elapsed_ms)
     print(format_verdicts(report, engine))
     print()
-    print(render_conclusion(report))
+    print(conclusion_text(report, args))
     if args.json is not None:
         report.save(args.json)
         print()
         print(f"JSON: {args.json}")
     return EXIT_ACCEPTED if report.accepted else EXIT_REJECTED
+
+
+def conclusion_text(report: Report, args: argparse.Namespace) -> str:
+    """Conclusion from the template, or from the language model when requested."""
+    if not args.llm:
+        return render_conclusion(report)
+    client = build_client(args.mock, LLM_MODEL, args.llm_cache, template_synthesizer)
+    conclusion = generate_conclusion(report, client)
+    log.info("conclusion source: %s", conclusion.source)
+    return conclusion.text
 
 
 def run_models_download(args: argparse.Namespace) -> int:
@@ -119,7 +140,10 @@ def main(
     argv: Sequence[str] | None = None, backend_factory: BackendFactory = default_backend
 ) -> int:
     """Entry point."""
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.command == "check" and args.mock and not args.llm:
+        parser.error("--mock requires --llm")
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(levelname)s %(name)s: %(message)s",

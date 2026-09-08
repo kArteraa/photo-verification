@@ -1,4 +1,5 @@
 import json
+import logging
 
 import numpy as np
 import pytest
@@ -111,3 +112,24 @@ def test_cli_on_fixture_portrait(fixtures_dir, tmp_path, capsys):
     report = json.loads(out.read_text(encoding="utf-8"))
     assert report["verdicts"][0]["id"] == "single_face"
     assert report["verdicts"][0]["status"] == "pass"
+
+
+def test_llm_without_key_warns_and_uses_mock(tmp_path, capsys, caplog, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    caplog.set_level(logging.INFO)
+    path, landmarks, mask = portrait_like(tmp_path)
+    code = cli.main(
+        ["check", str(path), "--spec", SPEC, "--llm", "--llm-cache", str(tmp_path / "cache")],
+        backend_factory=fake_factory(landmarks, mask),
+    )
+    assert code == cli.EXIT_ACCEPTED
+    assert "ANTHROPIC_API_KEY" in caplog.text
+    assert "conclusion source: mock" in caplog.text
+    assert "ИТОГ: ПРИНЯТО" in capsys.readouterr().out
+
+
+def test_mock_requires_llm(tmp_path):
+    path, landmarks, mask = portrait_like(tmp_path)
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["check", str(path), "--spec", SPEC, "--mock"], fake_factory(landmarks, mask))
+    assert exc.value.code == cli.EXIT_USAGE
