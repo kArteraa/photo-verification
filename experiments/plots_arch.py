@@ -27,7 +27,7 @@ SHADED = {1, 3, 5}
 def draw_architecture(path: Path, dpi: int = 300) -> Path:
     """Render the pipeline diagram as a grayscale-friendly JPEG."""
     fig, ax = plt.subplots(figsize=(13, 3.6))
-    ax.set_xlim(0, 1)
+    ax.set_xlim(-0.02, 1.02)
     ax.set_ylim(0, 1)
     ax.axis("off")
     for index, (label, x) in enumerate(STAGES):
