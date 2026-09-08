@@ -8,6 +8,7 @@ import yaml
 from app.analyzers import REGISTRY
 from app.core.spec import load_spec
 from experiments.calibrate import (
+    calibratable,
     calibrate_requirement,
     choose_threshold,
     clean_percentiles,
@@ -103,3 +104,11 @@ def test_clean_percentiles():
     table = clean_percentiles(frame(), spec)
     assert table["face_sharpness.var"]["p95"] == pytest.approx(197.0)
     assert "exposure_ok.mean_brightness" in table
+
+
+def test_calibratable_excludes_exact_and_self_selected():
+    spec = load_spec(SPEC_PATH, REGISTRY)
+    assert calibratable(spec, "blur_face")
+    assert not calibratable(spec, "multi_face")
+    assert not calibratable(spec, "non_frontal")
+    assert not calibratable(spec, "eyes_closed") or "eyes_open" in spec.ids

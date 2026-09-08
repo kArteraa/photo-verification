@@ -44,6 +44,7 @@ SIDE_LOW = "lo"
 SIDE_HIGH = "hi"
 CALIBRATION_SIDES = {"dark": SIDE_LOW, "bright": SIDE_HIGH, "face_small": SIDE_LOW}
 SELF_SELECTED = ("non_frontal",)
+EXACT_OPS = ("eq",)
 PERCENTILES = (95, 99)
 DECIMALS = 4
 
@@ -131,6 +132,14 @@ def calibrate_requirement(
     }
 
 
+def calibratable(spec: Spec, cls: str) -> bool:
+    """Classes whose requirement has a tunable threshold and was not selected by the system."""
+    requirement_id = CLASS_TO_REQUIREMENT[cls]
+    if cls in SELF_SELECTED or requirement_id not in spec.ids:
+        return False
+    return spec.by_id(requirement_id).predicate.op not in EXACT_OPS
+
+
 def clean_percentiles(frame: pd.DataFrame, spec: Spec) -> dict:
     """Reference percentiles of every predicate key on clean images."""
     clean = frame[frame["cls"] == CLEAN]
@@ -199,7 +208,7 @@ def main() -> None:
     updates = [
         calibrate_requirement(frame, spec, cls, args.mode, args.max_frr)
         for cls in CLASS_TO_REQUIREMENT
-        if cls in present and cls not in SELF_SELECTED and CLASS_TO_REQUIREMENT[cls] in spec.ids
+        if cls in present and calibratable(spec, cls)
     ]
     for update in updates:
         log.info(
